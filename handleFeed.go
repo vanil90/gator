@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"database/sql"
 	"encoding/xml"
 	"fmt"
 	"gator/internal/database"
@@ -65,8 +64,8 @@ func handleAddFeed(s *State, cmd Command) error {
 	url := cmd.Args[1]
 	feed, err := s.db.CreateFeed(ctx, database.CreateFeedParams{
 		ID:        uuid.New(),
-		CreatedAt: sql.NullTime{Time: time.Now(), Valid: true},
-		UpdatedAt: sql.NullTime{Time: time.Now(), Valid: true},
+		CreatedAt: time.Now(),
+		UpdatedAt: time.Now(),
 		Name:      name,
 		Url:       url,
 		UserID:    user.ID,
@@ -74,6 +73,14 @@ func handleAddFeed(s *State, cmd Command) error {
 	if err != nil {
 		return fmt.Errorf("addfeed: %w", err)
 	}
+
+	s.db.CreateFeedFollow(ctx, database.CreateFeedFollowParams{
+		ID:        uuid.New(),
+		UserID:    user.ID,
+		FeedID:    feed.ID,
+		CreatedAt: time.Now(),
+		UpdatedAt: time.Now(),
+	})
 
 	fmt.Println(feed)
 

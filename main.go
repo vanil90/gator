@@ -40,6 +40,8 @@ func main() {
 	handlers.register("agg", handleAgg)
 	handlers.register("addfeed", handleAddFeed)
 	handlers.register("feeds", handleListFeeds)
+	handlers.register("follow", handleFollow)
+	handlers.register("following", handleFollowing)
 
 	db, err := sql.Open("postgres", cfg.DbUrl)
 	dbQueries := database.New(db)

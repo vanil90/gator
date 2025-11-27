@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"database/sql"
 	"errors"
 	"fmt"
 	"gator/internal/database"
@@ -48,8 +47,8 @@ func handleRegister(s *State, cmd Command) error {
 
 	userParams := database.CreateUserParams{
 		ID:        uuid.New(),
-		CreatedAt: sql.NullTime{Time: time.Now(), Valid: true},
-		UpdatedAt: sql.NullTime{Time: time.Now(), Valid: true},
+		CreatedAt: time.Now(),
+		UpdatedAt: time.Now(),
 		Name:      cmd.Args[0],
 	}
 	fmt.Println(userParams)
