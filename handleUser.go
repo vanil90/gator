@@ -48,8 +48,8 @@ func handleRegister(s *State, cmd Command) error {
 
 	userParams := database.CreateUserParams{
 		ID:        uuid.New(),
-		CreatedAt: sql.NullTime{Time: time.Now()},
-		UpdatedAt: sql.NullTime{Time: time.Now()},
+		CreatedAt: sql.NullTime{Time: time.Now(), Valid: true},
+		UpdatedAt: sql.NullTime{Time: time.Now(), Valid: true},
 		Name:      cmd.Args[0],
 	}
 	fmt.Println(userParams)

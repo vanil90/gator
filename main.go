@@ -37,6 +37,9 @@ func main() {
 	handlers.register("register", handleRegister)
 	handlers.register("reset", handleReset)
 	handlers.register("users", handleUsers)
+	handlers.register("agg", handleAgg)
+	handlers.register("addfeed", handleAddFeed)
+	handlers.register("feeds", handleListFeeds)
 
 	db, err := sql.Open("postgres", cfg.DbUrl)
 	dbQueries := database.New(db)
