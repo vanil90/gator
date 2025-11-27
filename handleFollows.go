@@ -61,5 +61,28 @@ func handleFollowing(s *state, cmd command, user database.User) error {
 	}
 
 	return nil
+}
 
+func handleUnfollow(s *state, cmd command, user database.User) error {
+	if len(cmd.Args) != 1 {
+		return fmt.Errorf("unfollow: invalid arguments, expected %d but got %d", 1, len(cmd.Args))
+	}
+	url := cmd.Args[0]
+	ctx := context.Background()
+
+	feed, err := s.db.GetFeed(ctx, url)
+	if err != nil {
+		return fmt.Errorf("unfollow: feed not found: %w", err)
+	}
+
+	err = s.db.DeleteFollow(ctx, database.DeleteFollowParams{
+		UserID: user.ID,
+		FeedID: feed.ID,
+	})
+	if err != nil {
+		return fmt.Errorf("unfollow: failed to delete feed: %w", err)
+	}
+
+	fmt.Printf("'%s' unfollowed successfully!\n", feed.Name)
+	return nil
 }
