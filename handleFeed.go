@@ -39,7 +39,7 @@ func fetchFeed(ctx context.Context, feedUrl string) (*rss.RSSFeed, error) {
 	return &result, nil
 }
 
-func handleAgg(s *State, cmd Command) error {
+func handleAgg(s *state, cmd command) error {
 	rss, err := fetchFeed(context.Background(), "https://www.wagslane.dev/index.xml")
 	if err != nil {
 		return err
@@ -49,16 +49,12 @@ func handleAgg(s *State, cmd Command) error {
 	return nil
 }
 
-func handleAddFeed(s *State, cmd Command) error {
+func handleAddFeed(s *state, cmd command, user database.User) error {
 	if len(cmd.Args) != 2 {
 		return fmt.Errorf("addfeed: invalid arguments, expected %d but got %d", 2, len(cmd.Args))
 	}
 
 	ctx := context.Background()
-	user, err := s.db.GetUser(ctx, s.Config.CurrentUsername)
-	if err != nil {
-		return fmt.Errorf("addfeed: %w", err)
-	}
 
 	name := cmd.Args[0]
 	url := cmd.Args[1]
@@ -87,7 +83,7 @@ func handleAddFeed(s *State, cmd Command) error {
 	return nil
 }
 
-func handleListFeeds(s *State, cmd Command) error {
+func handleListFeeds(s *state, cmd command) error {
 	ctx := context.Background()
 
 	feeds, err := s.db.GetFeeds(ctx)

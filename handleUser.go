@@ -10,7 +10,7 @@ import (
 	"github.com/google/uuid"
 )
 
-func handleLogin(s *State, cmd Command) error {
+func handleLogin(s *state, cmd command) error {
 	if len(cmd.Args) != 1 {
 		return errors.New("login: invalid arguments for 'login' command")
 	}
@@ -31,7 +31,7 @@ func handleLogin(s *State, cmd Command) error {
 	return nil
 }
 
-func handleRegister(s *State, cmd Command) error {
+func handleRegister(s *state, cmd command) error {
 	if len(cmd.Args) != 1 {
 		return errors.New("register: invalid arguments for 'register' command")
 	}
@@ -67,7 +67,7 @@ func handleRegister(s *State, cmd Command) error {
 	return nil
 }
 
-func handleReset(s *State, cmd Command) error {
+func handleReset(s *state, cmd command) error {
 	err := s.db.DeleteAllUsers(context.Background())
 	if err != nil {
 		return fmt.Errorf("reset: %w", err)
@@ -76,7 +76,7 @@ func handleReset(s *State, cmd Command) error {
 	return nil
 }
 
-func handleUsers(s *State, cmd Command) error {
+func handleUsers(s *state, cmd command) error {
 	users, err := s.db.GetUsers(context.Background())
 	if err != nil {
 		return fmt.Errorf("users: %w", err)

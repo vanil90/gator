@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
 	"gator/internal/config"
@@ -10,7 +11,7 @@ import (
 	_ "github.com/lib/pq"
 )
 
-func (c *Commands) run(s *State, cmd Command) error {
+func (c *Commands) run(s *state, cmd command) error {
 	handler, ok := c.commands[cmd.Name]
 	if !ok {
 		return fmt.Errorf("invalid command name: '%s'", cmd.Name)
@@ -18,8 +19,19 @@ func (c *Commands) run(s *State, cmd Command) error {
 	return handler(s, cmd)
 }
 
-func (c *Commands) register(name string, f func(*State, Command) error) {
+func (c *Commands) register(name string, f func(*state, command) error) {
 	c.commands[name] = f
+}
+
+func middlewareLoggedIn(handler func(s *state, cmd command, user database.User) error) func(*state, command) error {
+	return func(s *state, cmd command) error {
+		user, err := s.db.GetUser(context.Background(), s.Config.CurrentUsername)
+		if err != nil {
+			return err
+		}
+
+		return handler(s, cmd, user)
+	}
 }
 
 func main() {
@@ -27,21 +39,22 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	s := State{
+	s := state{
 		Config: cfg,
 	}
-	handlers := Commands{
-		commands: make(map[string]func(*State, Command) error),
+	cmds := Commands{
+		commands: make(map[string]func(*state, command) error),
 	}
-	handlers.register("login", handleLogin)
-	handlers.register("register", handleRegister)
-	handlers.register("reset", handleReset)
-	handlers.register("users", handleUsers)
-	handlers.register("agg", handleAgg)
-	handlers.register("addfeed", handleAddFeed)
-	handlers.register("feeds", handleListFeeds)
-	handlers.register("follow", handleFollow)
-	handlers.register("following", handleFollowing)
+
+	cmds.register("login", handleLogin)
+	cmds.register("register", handleRegister)
+	cmds.register("reset", handleReset)
+	cmds.register("users", handleUsers)
+	cmds.register("agg", handleAgg)
+	cmds.register("addfeed", middlewareLoggedIn(handleAddFeed))
+	cmds.register("feeds", handleListFeeds)
+	cmds.register("follow", middlewareLoggedIn(handleFollow))
+	cmds.register("following", middlewareLoggedIn(handleFollowing))
 
 	db, err := sql.Open("postgres", cfg.DbUrl)
 	dbQueries := database.New(db)
@@ -54,12 +67,12 @@ func main() {
 	cmdName := os.Args[1]
 
 	fmt.Println(args)
-	cmd := Command{
+	cmd := command{
 		Name: cmdName,
 		Args: args,
 	}
 
-	err = handlers.run(&s, cmd)
+	err = cmds.run(&s, cmd)
 
 	if err != nil {
 		fmt.Println(err)

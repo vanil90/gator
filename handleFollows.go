@@ -15,7 +15,7 @@ func printFollow(follows []database.CreateFeedFollowRow) {
 	}
 }
 
-func handleFollow(s *State, cmd Command) error {
+func handleFollow(s *state, cmd command, user database.User) error {
 	if len(cmd.Args) != 1 {
 		return fmt.Errorf("follow: invalid arguments, expected %d but got %d", 1, len(cmd.Args))
 	}
@@ -25,11 +25,6 @@ func handleFollow(s *State, cmd Command) error {
 	feed, err := s.db.GetFeed(ctx, url)
 	if err != nil {
 		return fmt.Errorf("follow: failed to find feed: %w", err)
-	}
-
-	user, err := s.db.GetUser(ctx, s.Config.CurrentUsername)
-	if err != nil {
-		return fmt.Errorf("follow: failed to find user: %w", err)
 	}
 
 	follow, err := s.db.CreateFeedFollow(ctx, database.CreateFeedFollowParams{
@@ -48,18 +43,18 @@ func handleFollow(s *State, cmd Command) error {
 	return nil
 }
 
-func handleFollowing(s *State, cmd Command) error {
+func handleFollowing(s *state, cmd command, user database.User) error {
 	if len(cmd.Args) != 0 {
 		return fmt.Errorf("following: invalid arguments, expected %d but got %d", 0, len(cmd.Args))
 	}
 
 	ctx := context.Background()
-	follows, err := s.db.GetFeedFollowsForUser(ctx, s.Config.CurrentUsername)
+	follows, err := s.db.GetFeedFollowsForUser(ctx, user.Name)
 	if err != nil {
 		return fmt.Errorf("following: failed to find follows for current user: %w", err)
 	}
 
-	fmt.Printf("%s follows:\n", s.Config.CurrentUsername)
+	fmt.Printf("%s follows:\n", user.Name)
 	for _, f := range follows {
 		fmt.Printf("Feed Name:\t%s\nFeed URL:\t%s\n", f.FeedName, f.FeedUrl)
 		fmt.Println("---")

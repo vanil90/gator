@@ -5,16 +5,16 @@ import (
 	"gator/internal/database"
 )
 
-type State struct {
+type state struct {
 	db     *database.Queries
 	Config config.Config
 }
 
-type Command struct {
+type command struct {
 	Name string
 	Args []string
 }
 
 type Commands struct {
-	commands map[string]func(*State, Command) error
+	commands map[string]func(*state, command) error
 }
