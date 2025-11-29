@@ -2,7 +2,9 @@ package main
 
 import (
 	"context"
+	"database/sql"
 	"encoding/xml"
+	"errors"
 	"fmt"
 	"gator/internal/database"
 	"gator/internal/rss"
@@ -40,13 +42,23 @@ func fetchFeed(ctx context.Context, feedUrl string) (*rss.RSSFeed, error) {
 }
 
 func handleAgg(s *state, cmd command) error {
-	rss, err := fetchFeed(context.Background(), "https://www.wagslane.dev/index.xml")
-	if err != nil {
-		return err
+	if len(cmd.Args) != 1 {
+		return fmt.Errorf("agg: expected duration")
 	}
 
-	fmt.Println(rss)
-	return nil
+	interval, err := time.ParseDuration(cmd.Args[0])
+	if err != nil {
+		return fmt.Errorf("agg: invalid duration: %w", err)
+	}
+	if interval < time.Second*10 {
+		return errors.New("agg: invalid duration, should be at least 10s")
+	}
+
+	ticker := time.NewTicker(interval)
+	for {
+		scrapeFeeds(s)
+		<-ticker.C
+	}
 }
 
 func handleAddFeed(s *state, cmd command, user database.User) error {
@@ -95,5 +107,33 @@ func handleListFeeds(s *state, cmd command) error {
 		fmt.Printf("Name:\t%s\nURL:\t%s\nUser:\t%s\n", feed.FeedName, feed.FeedUrl, feed.UserName)
 		fmt.Println("---")
 	}
+	return nil
+}
+
+func scrapeFeeds(s *state) error {
+	ctx := context.Background()
+	feed, err := s.db.GetNextFeedToFetch(ctx)
+	if err != nil {
+		return fmt.Errorf("scrapefeed: %w", err)
+	}
+
+	err = s.db.MarkFeedFetched(ctx, database.MarkFeedFetchedParams{
+		ID:            feed.ID,
+		LastFetchedAt: sql.NullTime{Valid: true, Time: time.Now()},
+	})
+	if err != nil {
+		return fmt.Errorf("scrapefeed: %w", err)
+	}
+
+	rssFeed, err := fetchFeed(ctx, feed.Url)
+	if err != nil {
+		return fmt.Errorf("scrapefeed: %w", err)
+	}
+
+	fmt.Printf("Fetched feed '%s'\n---\n", feed.Name)
+	for _, item := range rssFeed.Channel.Item {
+		fmt.Printf("Title: %s\n", item.Title)
+	}
+	fmt.Println("---")
 	return nil
 }
