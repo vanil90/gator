@@ -56,6 +56,7 @@ func main() {
 	cmds.register("follow", middlewareLoggedIn(handleFollow))
 	cmds.register("following", middlewareLoggedIn(handleFollowing))
 	cmds.register("unfollow", middlewareLoggedIn(handleUnfollow))
+	cmds.register("browse", middlewareLoggedIn(handleBrowse))
 
 	db, err := sql.Open("postgres", cfg.DbUrl)
 	dbQueries := database.New(db)

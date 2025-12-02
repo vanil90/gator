@@ -10,6 +10,7 @@ import (
 	"gator/internal/rss"
 	"html"
 	"net/http"
+	"strconv"
 	"time"
 
 	"github.com/google/uuid"
@@ -117,10 +118,7 @@ func scrapeFeeds(s *state) error {
 		return fmt.Errorf("scrapefeed: %w", err)
 	}
 
-	err = s.db.MarkFeedFetched(ctx, database.MarkFeedFetchedParams{
-		ID:            feed.ID,
-		LastFetchedAt: sql.NullTime{Valid: true, Time: time.Now()},
-	})
+	err = s.db.MarkFeedFetched(ctx, feed.ID)
 	if err != nil {
 		return fmt.Errorf("scrapefeed: %w", err)
 	}
@@ -132,8 +130,70 @@ func scrapeFeeds(s *state) error {
 
 	fmt.Printf("Fetched feed '%s'\n---\n", feed.Name)
 	for _, item := range rssFeed.Channel.Item {
-		fmt.Printf("Title: %s\n", item.Title)
+		pubDate, err := parseDate(item.PubDate)
+		if err != nil {
+			fmt.Println(err)
+		} else {
+			fmt.Printf("Title: %s\nURL: %s\n***\n", pubDate.UTC(), item.Link)
+		}
+
+		_, err = s.db.CreatePost(ctx, database.CreatePostParams{
+			ID:          uuid.New(),
+			CreatedAt:   time.Now(),
+			UpdatedAt:   time.Now(),
+			PublishedAt: pubDate,
+			Title:       item.Title,
+			Url:         item.Link,
+			Description: sql.NullString{String: item.Description, Valid: true},
+			FeedID:      feed.ID,
+		})
+		if err != nil {
+			fmt.Println(err)
+		}
 	}
+
+	s.db.CreatePost(ctx, database.CreatePostParams{})
 	fmt.Println("---")
+	return nil
+}
+
+const dateLayout = "Mon, 02 Jan 2006 15:04:05 -0700"
+
+func parseDate(date string) (time.Time, error) {
+	pubDate, err := time.Parse(dateLayout, date)
+	if err != nil {
+		return time.Time{}, err
+	}
+
+	return pubDate, nil
+}
+
+func handleBrowse(s *state, cmd command, user database.User) error {
+	if len(cmd.Args) > 1 {
+		return fmt.Errorf("browse: too many arguments")
+	}
+	limit := 2
+	var err error
+	if len(cmd.Args) == 1 {
+		limit, err = strconv.Atoi(cmd.Args[0])
+		if err != nil {
+			return fmt.Errorf("browse: invalid limit: %w", err)
+		}
+	}
+
+	ctx := context.Background()
+
+	posts, err := s.db.GetPostsForUser(ctx, database.GetPostsForUserParams{
+		UserID: user.ID,
+		Limit:  int32(limit),
+	})
+	if err != nil {
+		return fmt.Errorf("browse: failed to fetch posts for user")
+	}
+
+	for _, post := range posts {
+		fmt.Printf("Title: %s\nURL: %s\n***\n", post.Title, post.Url)
+	}
+
 	return nil
 }
